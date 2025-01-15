@@ -25,8 +25,9 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const userCollection = client.db("insertDB").collection("user");
+    const userCollection = client.db("matchMateDB").collection("user");
 
+    // user data post
     app.post('/userLogin', async(req, res)=>{
         const user = req.body;
         const email = user.email
@@ -37,6 +38,14 @@ async function run() {
         }
 
         const result = await userCollection.insertOne(user)
+        res.send(result)
+    })
+
+    // user data get
+    app.get('/userData/:email', async(req, res)=>{
+        const email = req.params.email;
+        const query = {email: email}
+        const result = await userCollection.findOne(query)
         res.send(result)
     })
     
