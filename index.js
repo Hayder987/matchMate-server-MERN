@@ -1,12 +1,19 @@
 require("dotenv").config();
 const express = require("express");
+const cookieParser = require('cookie-parser')
 const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173"],
+  credentials:true
+}));
+
 app.use(express.json());
+app.use(cookieParser())
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.7ya1e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -22,6 +29,24 @@ async function run() {
   try {
     const userCollection = client.db("matchMateDB").collection("user");
     const bioDataCollection = client.db("matchMateDB").collection("bioData");
+    
+    // create token
+    app.post('/jwt',(req, res)=>{
+      const user = req.body
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {expiresIn:'3d'})
+      res.cookie('token', token, {
+        secure: process.env.NODE_ENV === 'production', 
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+      }).send({status:true})
+    })
+
+    // remove token
+    app.post('/logout', (req, res)=>{
+      res.clearCookie('token', {
+        secure: process.env.NODE_ENV === 'production', 
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+      }).send({status:false})
+    })
 
     // user data post
     app.post("/userLogin", async (req, res) => {
