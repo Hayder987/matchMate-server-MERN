@@ -47,6 +47,18 @@ async function run() {
   try {
     const userCollection = client.db("matchMateDB").collection("user");
     const bioDataCollection = client.db("matchMateDB").collection("bioData");
+
+    // verify Admin
+    const verifyAdmin = async(req, res, next)=>{
+      const email = req.user.email;
+      const query = {email: email} 
+      const userData = await userCollection.findOne(query)
+      const isAdmin = userData.role ==="admin";
+      if(!isAdmin){
+       return res.status(403).send('forbidden Access')
+      }
+      next()
+   }
     
     // create token
     app.post('/jwt',(req, res)=>{
@@ -87,7 +99,7 @@ async function run() {
         return res.status(403).send('Forbidden Access') 
       }  
       const query = {email:email}
-      const result = await userCollection.findOne(query, {$set: {type: "pending"}})
+      const result = await userCollection.updateOne(query, {$set: {type: "pending"}})
       res.send(result)
     })
 
