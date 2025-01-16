@@ -65,11 +65,52 @@ async function run() {
         $set: { status: "registered" },
       });
 
-      const result = await bioDataCollection.insertOne(bioData);
+      const result = await bioDataCollection.insertOne({
+        ...bioData,
+        type: "regular",
+      });
       res.send(result);
     });
+    
+    // update user bio data
+    app.patch("/userBio/:email", async (req, res) => {
+      const email = req.params.email;
+      const bioData = req.body
+      const query = { email: email };
+      const updateDoc = {
+        $set: {
+          biodataType: bioData.biodataType ,
+          info:{
+            name:bioData.info.name,
+            fathername:bioData.info.fathername,
+            mothername:bioData.info.mothername,
+            height:bioData.info.height,
+            weight:bioData.info.weight,
+            race:bioData.info.race,
+            age:bioData.info.age,
+            birthDate:bioData.info.birthDate,
+            presentDivision:bioData.info.presentDivision,
+            permanentDivision:bioData.info.permanentDivision,
+            occupation:bioData.info.occupation,
+            mobileNumber:bioData.info.mobileNumber
+          },
+          expectedHeight:bioData.expectedHeight,
+          expectedWeight:bioData.expectedWeight,
+          partenerAge:bioData.partenerAge,
+          image:bioData.image,
+        },
+      };
+      const result = await bioDataCollection.updateOne(query, updateDoc)
+      res.send(result)
+    });
 
-
+    // get bioData by email
+    app.get("/userBio/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await bioDataCollection.findOne(query);
+      res.send(result);
+    });
   } finally {
     console.log(`Mongodb Running`);
   }
