@@ -92,8 +92,11 @@ async function run() {
     });
 
     // create bioData private
-    app.post("/bioData", async (req, res) => {
+    app.post("/bioData",verifyToken, async (req, res) => {
       const bioData = req.body;
+      if(req.user.email!== bioData.email){
+        return res.status(403).send('Forbidden Access') 
+      }
       const lastBiodata = await bioDataCollection
         .find({})
         .sort({ bioId: -1 })
@@ -106,18 +109,12 @@ async function run() {
       }
       bioData.bioId = bioId;
       const email = bioData.email;
-      if(req.user.email!==email){
-        return res.status(403).send('Forbidden Access') 
-      }
       const query = { email: email };
       const updateStatus = await userCollection.updateOne(query, {
         $set: { status: "registered" },
       });
 
-      const result = await bioDataCollection.insertOne({
-        ...bioData,
-        type: "regular",
-      });
+      const result = await bioDataCollection.insertOne(bioData);
       res.send(result);
     });
     
