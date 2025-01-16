@@ -13,7 +13,25 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(cookieParser())
+app.use(cookieParser());
+
+const verifyToken=(req, res, next)=>{
+  const token = req.cookies.token
+  if(!token){
+  return  res.status(401).send('UnAuthorized: Authentication credentials are missing')
+  }
+
+  jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded)=>{
+    if(err){
+      return  res.status(401).send('UnAuthorized: Authentication credentials are inValid') 
+    }
+
+    req.user = decoded
+    next()
+  })
+
+}
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.7ya1e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -62,15 +80,18 @@ async function run() {
       res.send(result);
     });
 
-    // user data get
-    app.get("/userData/:email", async (req, res) => {
+    // user data get private
+    app.get("/userData/:email",verifyToken,  async (req, res) => {
       const email = req.params.email;
+      if(req.user.email!==email){
+        return res.status(403).send('Forbidden Access') 
+      }
       const query = { email: email };
       const result = await userCollection.findOne(query);
       res.send(result);
     });
 
-    // create bioData
+    // create bioData private
     app.post("/bioData", async (req, res) => {
       const bioData = req.body;
       const lastBiodata = await bioDataCollection
@@ -85,6 +106,9 @@ async function run() {
       }
       bioData.bioId = bioId;
       const email = bioData.email;
+      if(req.user.email!==email){
+        return res.status(403).send('Forbidden Access') 
+      }
       const query = { email: email };
       const updateStatus = await userCollection.updateOne(query, {
         $set: { status: "registered" },
@@ -97,9 +121,12 @@ async function run() {
       res.send(result);
     });
     
-    // update user bio data
-    app.patch("/userBio/:email", async (req, res) => {
+    // update user bio data private
+    app.patch("/userBio/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
+      if(req.user.email!==email){
+        return res.status(403).send('Forbidden Access') 
+      }
       const bioData = req.body
       const query = { email: email };
       const updateDoc = {
@@ -130,8 +157,11 @@ async function run() {
     });
 
     // get bioData by email
-    app.get("/userBio/:email", async (req, res) => {
+    app.get("/userBio/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
+      if(req.user.email !== email){
+        return res.status(403).send('Forbidden Access')
+      }
       const query = { email: email };
       const result = await bioDataCollection.findOne(query);
       res.send(result);
