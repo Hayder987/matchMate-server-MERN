@@ -80,6 +80,17 @@ async function run() {
       res.send(result);
     });
 
+    // request api to make user premium
+    app.patch('/userPending/:email', verifyToken, async(req, res)=>{
+      const email = req.params.email;
+      if(req.user.email!==email){
+        return res.status(403).send('Forbidden Access') 
+      }  
+      const query = {email:email}
+      const result = await userCollection.findOne(query, {$set: {type: "pending"}})
+      res.send(result)
+    })
+
     // user data get private
     app.get("/userData/:email",verifyToken,  async (req, res) => {
       const email = req.params.email;
