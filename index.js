@@ -186,6 +186,19 @@ async function run() {
       const result = await bioDataCollection.findOne(query);
       res.send(result);
     });
+
+    // admin api------------------------------------->
+
+    // get all user Premium request
+    app.get('/userPremiumReq',verifyToken, verifyAdmin, async(req, res)=>{
+      const query = {type:'pending'}
+      const result = await userCollection.find(query).toArray() 
+      res.send(result)
+    })
+
+
+    
+
   } finally {
     console.log(`Mongodb Running`);
   }
