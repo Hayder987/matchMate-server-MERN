@@ -1,37 +1,41 @@
 require("dotenv").config();
 const express = require("express");
-const cookieParser = require('cookie-parser')
+const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(cors({
-  origin: ["http://localhost:5173"],
-  credentials:true
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(cookieParser());
 
-const verifyToken=(req, res, next)=>{
-  const token = req.cookies.token
-  if(!token){
-  return  res.status(401).send('UnAuthorized: Authentication credentials are missing')
+const verifyToken = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) {
+    return res
+      .status(401)
+      .send("UnAuthorized: Authentication credentials are missing");
   }
 
-  jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded)=>{
-    if(err){
-      return  res.status(401).send('UnAuthorized: Authentication credentials are inValid') 
+  jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+    if (err) {
+      return res
+        .status(401)
+        .send("UnAuthorized: Authentication credentials are inValid");
     }
 
-    req.user = decoded
-    next()
-  })
-
-}
-
+    req.user = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.7ya1e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -49,34 +53,40 @@ async function run() {
     const bioDataCollection = client.db("matchMateDB").collection("bioData");
 
     // verify Admin
-    const verifyAdmin = async(req, res, next)=>{
+    const verifyAdmin = async (req, res, next) => {
       const email = req.user.email;
-      const query = {email: email} 
-      const userData = await userCollection.findOne(query)
-      const isAdmin = userData.role ==="admin";
-      if(!isAdmin){
-       return res.status(403).send('forbidden Access')
+      const query = { email: email };
+      const userData = await userCollection.findOne(query);
+      const isAdmin = userData.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send("forbidden Access");
       }
-      next()
-   }
-    
+      next();
+    };
+
     // create token
-    app.post('/jwt',(req, res)=>{
-      const user = req.body
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {expiresIn:'3d'})
-      res.cookie('token', token, {
-        secure: process.env.NODE_ENV === 'production', 
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
-      }).send({status:true})
-    })
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
+        expiresIn: "3d",
+      });
+      res
+        .cookie("token", token, {
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ status: true });
+    });
 
     // remove token
-    app.post('/logout', (req, res)=>{
-      res.clearCookie('token', {
-        secure: process.env.NODE_ENV === 'production', 
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
-      }).send({status:false})
-    })
+    app.post("/logout", (req, res) => {
+      res
+        .clearCookie("token", {
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ status: false });
+    });
 
     // user data post
     app.post("/userLogin", async (req, res) => {
@@ -93,39 +103,92 @@ async function run() {
     });
 
     // request api to make user premium
-    app.patch('/userPending/:email', verifyToken, async(req, res)=>{
-      const body = req.body
+    app.patch("/userPending/:email", verifyToken, async (req, res) => {
+      const body = req.body;
       const email = req.params.email;
-      if(req.user.email!==email){
-        return res.status(403).send('Forbidden Access') 
-      }  
-      const query = {email:email}
-      const result = await userCollection.updateOne(query, 
-        {$set: 
-        {type: "pending",
-         bioId: body.bioId,
-         reqName: body.reqName 
-        },
-      })
-      res.send(result)
-    })
+      if (req.user.email !== email) {
+        return res.status(403).send("Forbidden Access");
+      }
+      const query = { email: email };
+      const result = await userCollection.updateOne(query, {
+        $set: { type: "pending", bioId: body.bioId, reqName: body.reqName },
+      });
+      res.send(result);
+    });
 
     // user data get private
-    app.get("/userData/:email",verifyToken,  async (req, res) => {
+    app.get("/userData/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      if(req.user.email!==email){
-        return res.status(403).send('Forbidden Access') 
+      if (req.user.email !== email) {
+        return res.status(403).send("Forbidden Access");
       }
       const query = { email: email };
       const result = await userCollection.findOne(query);
       res.send(result);
     });
 
+    // get premeium user data
+    app.get("/premiumUser", async (req, res) => {
+      const query = { type: "premium" }; 
+    
+        const result = await userCollection
+          .aggregate([
+            {
+              $match: query, 
+            },
+            {
+              $lookup: {
+                
+                from: "bioData", 
+                localField: "email", 
+                foreignField: "email", 
+                as: "bioDataInfo", 
+              },
+            },
+            {
+              $unwind: {
+                path: "$bioDataInfo", 
+                preserveNullAndEmptyArrays: true, 
+              },
+            },
+            {
+              $project: {
+                
+                _id: 1, 
+                bioId: 1,
+                reqName: 1,
+                email: 1,  
+                type: 1,
+                makeDate: 1,
+                profileBioId: '$bioDataInfo._id',
+                biodataType: "$bioDataInfo.biodataType" , 
+                image: "$bioDataInfo.image", 
+                "info.permanentDivision" : "$bioDataInfo.info.permanentDivision", 
+                "info.age": "$bioDataInfo.info.age", 
+                "info.occupation": "$bioDataInfo.info.occupation",
+
+              },
+            },
+            {
+              $sort: { makeDate: -1 }, 
+            },
+            {
+              $limit: 6, 
+            },
+          ])
+          .toArray();
+
+          res.send(result)
+    });
+    
+
+    
+
     // create bioData private
-    app.post("/bioData",verifyToken, async (req, res) => {
+    app.post("/bioData", verifyToken, async (req, res) => {
       const bioData = req.body;
-      if(req.user.email!== bioData.email){
-        return res.status(403).send('Forbidden Access') 
+      if (req.user.email !== bioData.email) {
+        return res.status(403).send("Forbidden Access");
       }
       const lastBiodata = await bioDataCollection
         .find({})
@@ -147,47 +210,47 @@ async function run() {
       const result = await bioDataCollection.insertOne(bioData);
       res.send(result);
     });
-    
+
     // update user bio data private
     app.patch("/userBio/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      if(req.user.email!==email){
-        return res.status(403).send('Forbidden Access') 
+      if (req.user.email !== email) {
+        return res.status(403).send("Forbidden Access");
       }
-      const bioData = req.body
+      const bioData = req.body;
       const query = { email: email };
       const updateDoc = {
         $set: {
-          biodataType: bioData.biodataType ,
-          info:{
-            name:bioData.info.name,
-            fathername:bioData.info.fathername,
-            mothername:bioData.info.mothername,
-            height:bioData.info.height,
-            weight:bioData.info.weight,
-            race:bioData.info.race,
-            age:bioData.info.age,
-            birthDate:bioData.info.birthDate,
-            presentDivision:bioData.info.presentDivision,
-            permanentDivision:bioData.info.permanentDivision,
-            occupation:bioData.info.occupation,
-            mobileNumber:bioData.info.mobileNumber
+          biodataType: bioData.biodataType,
+          info: {
+            name: bioData.info.name,
+            fathername: bioData.info.fathername,
+            mothername: bioData.info.mothername,
+            height: bioData.info.height,
+            weight: bioData.info.weight,
+            race: bioData.info.race,
+            age: bioData.info.age,
+            birthDate: bioData.info.birthDate,
+            presentDivision: bioData.info.presentDivision,
+            permanentDivision: bioData.info.permanentDivision,
+            occupation: bioData.info.occupation,
+            mobileNumber: bioData.info.mobileNumber,
           },
-          expectedHeight:bioData.expectedHeight,
-          expectedWeight:bioData.expectedWeight,
-          partenerAge:bioData.partenerAge,
-          image:bioData.image,
+          expectedHeight: bioData.expectedHeight,
+          expectedWeight: bioData.expectedWeight,
+          partenerAge: bioData.partenerAge,
+          image: bioData.image,
         },
       };
-      const result = await bioDataCollection.updateOne(query, updateDoc)
-      res.send(result)
+      const result = await bioDataCollection.updateOne(query, updateDoc);
+      res.send(result);
     });
 
     // get bioData by email
     app.get("/userBio/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
-      if(req.user.email !== email){
-        return res.status(403).send('Forbidden Access')
+      if (req.user.email !== email) {
+        return res.status(403).send("Forbidden Access");
       }
       const query = { email: email };
       const result = await bioDataCollection.findOne(query);
@@ -197,25 +260,23 @@ async function run() {
     // admin api------------------------------------->
 
     // get all user Premium request
-    app.get('/userPremiumReq',verifyToken, verifyAdmin, async(req, res)=>{
-      const query = {type:'pending'}
-      const result = await userCollection.find(query).toArray() 
-      res.send(result)
-    })
+    app.get("/userPremiumReq", verifyToken, verifyAdmin, async (req, res) => {
+      const query = { type: "pending" };
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    });
 
     // make user premium
 
-    app.patch('/userReq/:id', verifyToken, verifyAdmin, async(req, res)=>{
+    app.patch("/userReq/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      console.log(id)
-      const query = {_id: new ObjectId(id)}
-      const result = await userCollection.updateOne(query, {$set:{type:"premium", makeDate: new Date()}})
-      res.send(result)
-    })
-
-
-    
-
+      console.log(id);
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.updateOne(query, {
+        $set: { type: "premium", makeDate: new Date() },
+      });
+      res.send(result);
+    });
   } finally {
     console.log(`Mongodb Running`);
   }
