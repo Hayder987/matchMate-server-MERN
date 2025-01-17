@@ -4,8 +4,10 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
+const Stripe = require("stripe");
 const app = express();
 const port = process.env.PORT || 4000;
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 app.use(
   cors({
@@ -129,62 +131,56 @@ async function run() {
 
     // get premeium user data
     app.get("/premiumUser", async (req, res) => {
-      const query = { type: "premium" }; 
+      const query = { type: "premium" };
       const age = req.query.age;
-      const ageNumber = parseInt(age) || -1
-    
-        const result = await userCollection
-          .aggregate([
-            {
-              $match: query, 
-            },
-            {
-              $lookup: {
-                
-                from: "bioData", 
-                localField: "email", 
-                foreignField: "email", 
-                as: "bioDataInfo", 
-              },
-            },
-            {
-              $unwind: {
-                path: "$bioDataInfo", 
-                preserveNullAndEmptyArrays: true, 
-              },
-            },
-            {
-              $project: {
-                
-                _id: 1, 
-                bioId: 1,
-                reqName: 1,
-                email: 1,  
-                type: 1,
-                makeDate: 1,
-                profileBioId: '$bioDataInfo._id',
-                biodataType: "$bioDataInfo.biodataType" , 
-                image: "$bioDataInfo.image", 
-                "info.permanentDivision" : "$bioDataInfo.info.permanentDivision", 
-                "info.age": "$bioDataInfo.info.age", 
-                "info.occupation": "$bioDataInfo.info.occupation",
+      const ageNumber = parseInt(age) || -1;
 
-              },
+      const result = await userCollection
+        .aggregate([
+          {
+            $match: query,
+          },
+          {
+            $lookup: {
+              from: "bioData",
+              localField: "email",
+              foreignField: "email",
+              as: "bioDataInfo",
             },
-            {
-              $sort: { "info.age": ageNumber }, 
+          },
+          {
+            $unwind: {
+              path: "$bioDataInfo",
+              preserveNullAndEmptyArrays: true,
             },
-            {
-              $limit: 6, 
+          },
+          {
+            $project: {
+              _id: 1,
+              bioId: 1,
+              reqName: 1,
+              email: 1,
+              type: 1,
+              makeDate: 1,
+              profileBioId: "$bioDataInfo._id",
+              biodataType: "$bioDataInfo.biodataType",
+              image: "$bioDataInfo.image",
+              "info.permanentDivision": "$bioDataInfo.info.permanentDivision",
+              "info.age": "$bioDataInfo.info.age",
+              "info.occupation": "$bioDataInfo.info.occupation",
             },
-          ])
-          .toArray();
+          },
+          {
+            $sort: { "info.age": ageNumber },
+          },
+          {
+            $limit: 6,
+          },
+        ])
+        .toArray();
 
-          res.send(result)
+      res.send(result);
     });
-    
-
-    
 
     // create bioData private
     app.post("/bioData", verifyToken, async (req, res) => {
@@ -260,28 +256,46 @@ async function run() {
     });
 
     // get bioData by id
-    app.get('/singleBio/:id', verifyToken, async(req, res)=>{
+    app.get("/singleBio/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
-      const result = await bioDataCollection.findOne(query)
-      res.send(result)
-    })
+      const query = { _id: new ObjectId(id) };
+      const result = await bioDataCollection.findOne(query);
+      res.send(result);
+    });
 
     //  get similar bio with bioType
-    app.get('/sameBio', async(req, res)=>{
-      const type = req.query.type
-      const query = {biodataType:type}
-      const result = await bioDataCollection.find(query).sort({_id: 1}).limit(3).toArray()
-      res.send(result)
-    })
+    app.get("/sameBio", async (req, res) => {
+      const type = req.query.type;
+      const query = { biodataType: type };
+      const result = await bioDataCollection
+        .find(query)
+        .sort({ _id: 1 })
+        .limit(3)
+        .toArray();
+      res.send(result);
+    });
 
     // get biodata bye bioId
-    app.get('/contactBiodata/:bioId', verifyToken, async(req, res)=>{
+    app.get("/contactBiodata/:bioId", verifyToken, async (req, res) => {
       const bioId = parseInt(req.params.bioId);
-      const query = {bioId:bioId}
-      const result = await bioDataCollection.findOne(query)
-      res.send(result)
-    })
+      const query = { bioId: bioId };
+      const result = await bioDataCollection.findOne(query);
+      res.send(result);
+    });
+
+    // stripe setup--------------------------------------->
+    app.post("/create-payment-intent", async (req, res) => {
+      const {price} = req.body;
+      const amount = parseInt(price * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount, 
+        currency: "usd",
+        payment_method_types: ['card'],
+        // confirm: true,
+      });
+      res.send({clientSecret: paymentIntent.client_secret})
+    });
 
     // admin api------------------------------------->
 
