@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cookieParser = require('cookie-parser')
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 4000;
@@ -94,12 +94,19 @@ async function run() {
 
     // request api to make user premium
     app.patch('/userPending/:email', verifyToken, async(req, res)=>{
+      const body = req.body
       const email = req.params.email;
       if(req.user.email!==email){
         return res.status(403).send('Forbidden Access') 
       }  
       const query = {email:email}
-      const result = await userCollection.updateOne(query, {$set: {type: "pending"}})
+      const result = await userCollection.updateOne(query, 
+        {$set: 
+        {type: "pending",
+         bioId: body.bioId,
+         reqName: body.reqName 
+        },
+      })
       res.send(result)
     })
 
@@ -193,6 +200,16 @@ async function run() {
     app.get('/userPremiumReq',verifyToken, verifyAdmin, async(req, res)=>{
       const query = {type:'pending'}
       const result = await userCollection.find(query).toArray() 
+      res.send(result)
+    })
+
+    // make user premium
+
+    app.patch('/userReq/:id', verifyToken, verifyAdmin, async(req, res)=>{
+      const id = req.params.id;
+      console.log(id)
+      const query = {_id: new ObjectId(id)}
+      const result = await userCollection.updateOne(query, {$set:{type:"premium", makeDate: new Date()}})
       res.send(result)
     })
 
