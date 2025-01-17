@@ -130,6 +130,8 @@ async function run() {
     // get premeium user data
     app.get("/premiumUser", async (req, res) => {
       const query = { type: "premium" }; 
+      const age = req.query.age;
+      const ageNumber = parseInt(age) || -1
     
         const result = await userCollection
           .aggregate([
@@ -170,7 +172,7 @@ async function run() {
               },
             },
             {
-              $sort: { makeDate: -1 }, 
+              $sort: { "info.age": ageNumber }, 
             },
             {
               $limit: 6, 
@@ -256,6 +258,14 @@ async function run() {
       const result = await bioDataCollection.findOne(query);
       res.send(result);
     });
+
+    // get bioData by id
+    app.get('/singleBio/:id', verifyToken, async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await bioDataCollection.findOne(query)
+      res.send(result)
+    })
 
     // admin api------------------------------------->
 
