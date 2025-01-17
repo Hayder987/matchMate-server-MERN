@@ -267,6 +267,14 @@ async function run() {
       res.send(result)
     })
 
+    //  get similar bio with bioType
+    app.get('/sameBio', async(req, res)=>{
+      const type = req.query.type
+      const query = {biodataType:type}
+      const result = await bioDataCollection.find(query).sort({_id: 1}).limit(3).toArray()
+      res.send(result)
+    })
+
     // admin api------------------------------------->
 
     // get all user Premium request
