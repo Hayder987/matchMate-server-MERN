@@ -275,6 +275,14 @@ async function run() {
       res.send(result)
     })
 
+    // get biodata bye bioId
+    app.get('/contactBiodata/:bioId', verifyToken, async(req, res)=>{
+      const bioId = parseInt(req.params.bioId);
+      const query = {bioId:bioId}
+      const result = await bioDataCollection.findOne(query)
+      res.send(result)
+    })
+
     // admin api------------------------------------->
 
     // get all user Premium request
