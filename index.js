@@ -53,6 +53,7 @@ async function run() {
   try {
     const userCollection = client.db("matchMateDB").collection("user");
     const bioDataCollection = client.db("matchMateDB").collection("bioData");
+    const contactReqCollection = client.db("matchMateDB").collection("contactReq");
 
     // verify Admin
     const verifyAdmin = async (req, res, next) => {
@@ -305,6 +306,13 @@ async function run() {
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
+
+    // cheackout request post api
+    app.post('/cheackrequest', async(req, res)=>{
+      const reqInfo = req.body
+      const result = await contactReqCollection.insertOne({...reqInfo, status:"pending"}) 
+      res.send(result)
+    })
 
     // make user premium
 
