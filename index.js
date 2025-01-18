@@ -451,7 +451,26 @@ async function run() {
      res.send(result)
   })
 
+  // get all admin route data length
+  app.get('/allInformation', verifyToken, verifyAdmin, async(req, res)=>{
+    const totalBio = await bioDataCollection.countDocuments()
+    const female = await bioDataCollection.countDocuments({biodataType:"Female"})
+    const male = await bioDataCollection.countDocuments({biodataType:"Male"})
+    const premium = await userCollection.countDocuments({type:"premium"})
+    const totalRevenue = await contactReqCollection.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$amount" } 
+        }
+      }
+    ]).toArray();
 
+    res.send({totalBio, female, male,premium, totalRevenue})
+  })
+
+  
+  
 
 
   } finally {
