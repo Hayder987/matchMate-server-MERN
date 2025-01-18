@@ -54,6 +54,8 @@ async function run() {
     const userCollection = client.db("matchMateDB").collection("user");
     const bioDataCollection = client.db("matchMateDB").collection("bioData");
     const contactReqCollection = client.db("matchMateDB").collection("contactReq");
+    const favoriteCollection = client.db("matchMateDB").collection("favorite");
+
 
     // verify Admin
     const verifyAdmin = async (req, res, next) => {
@@ -182,6 +184,20 @@ async function run() {
 
       res.send(result);
     });
+
+    // post my favorite data
+    app.post("/myFavorite", async(req, res)=>{
+      const favoriteData = req.body;
+      const query = {serverId: favoriteData.serverId, email:favoriteData.email}
+      const isExist = await favoriteCollection.findOne(query)
+      if(isExist){
+        return res.send({status:true})
+      }
+      const result = await favoriteCollection.insertOne(favoriteData)
+      res.send(result)
+    })
+
+    // get My Favorite Data
 
     // create bioData private
     app.post("/bioData", verifyToken, async (req, res) => {
