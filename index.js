@@ -308,9 +308,16 @@ async function run() {
     });
 
     // cheackout request post api
-    app.post('/cheackrequest', async(req, res)=>{
+    app.post('/cheackrequest',verifyToken, async(req, res)=>{
       const reqInfo = req.body
       const result = await contactReqCollection.insertOne({...reqInfo, status:"pending"}) 
+      res.send(result)
+    })
+
+    //  get my Req Data Api
+    app.get('/contactReq/:email', verifyToken, async(req, res)=>{
+      const email = req.params.email;
+      const result = await contactReqCollection.find({ApplicantEmail:email}).toArray()
       res.send(result)
     })
 
