@@ -53,9 +53,10 @@ async function run() {
   try {
     const userCollection = client.db("matchMateDB").collection("user");
     const bioDataCollection = client.db("matchMateDB").collection("bioData");
-    const contactReqCollection = client.db("matchMateDB").collection("contactReq");
+    const contactReqCollection = client
+      .db("matchMateDB")
+      .collection("contactReq");
     const favoriteCollection = client.db("matchMateDB").collection("favorite");
-
 
     // verify Admin
     const verifyAdmin = async (req, res, next) => {
@@ -186,62 +187,67 @@ async function run() {
     });
 
     // post my favorite data
-    app.post("/myFavorite",verifyToken, async(req, res)=>{
+    app.post("/myFavorite", verifyToken, async (req, res) => {
       const favoriteData = req.body;
-      const query = {serverId: favoriteData.serverId, email:favoriteData.email}
-      const isExist = await favoriteCollection.findOne(query)
-      if(isExist){
-        return res.send({status:true})
+      const query = {
+        serverId: favoriteData.serverId,
+        email: favoriteData.email,
+      };
+      const isExist = await favoriteCollection.findOne(query);
+      if (isExist) {
+        return res.send({ status: true });
       }
-      const result = await favoriteCollection.insertOne(favoriteData)
-      res.send(result)
-    })
+      const result = await favoriteCollection.insertOne(favoriteData);
+      res.send(result);
+    });
 
     // get My Favorite Data with CI/CD Pipeline
-    app.get('/myFavorite/:email', verifyToken, async(req, res)=>{
-       const email = req.params.email;
-       const query = {email: email}
-       const result = await favoriteCollection.aggregate([
-        {$match:query},
-        {
-          $addFields: {
-            serverIdAsObjectId: { $toObjectId: "$serverId" }
-          }
-        },
-        {
-          $lookup:{
-            from:"bioData",
-            localField: "serverIdAsObjectId",
-            foreignField:"_id",
-            as:"myFavoriteData"
+    app.get("/myFavorite/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await favoriteCollection
+        .aggregate([
+          { $match: query },
+          {
+            $addFields: {
+              serverIdAsObjectId: { $toObjectId: "$serverId" },
+            },
           },
-        },
-        {
-         $unwind:{
-          path:'$myFavoriteData',
-          preserveNullAndEmptyArrays: true,
-         } 
-        },
-        {
-         $project:{
-          name: "$myFavoriteData.info.name",
-          bioDataId: "$myFavoriteData.bioId",
-          permanentAddress: "$myFavoriteData.info.permanentDivision",
-          occupation:"$myFavoriteData.info.occupation" 
-         } 
-        }
-       ]).toArray()
-       res.send(result)
-    })
+          {
+            $lookup: {
+              from: "bioData",
+              localField: "serverIdAsObjectId",
+              foreignField: "_id",
+              as: "myFavoriteData",
+            },
+          },
+          {
+            $unwind: {
+              path: "$myFavoriteData",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $project: {
+              name: "$myFavoriteData.info.name",
+              bioDataId: "$myFavoriteData.bioId",
+              permanentAddress: "$myFavoriteData.info.permanentDivision",
+              occupation: "$myFavoriteData.info.occupation",
+            },
+          },
+        ])
+        .toArray();
+      res.send(result);
+    });
 
     // delete my Favorite Data
-    app.delete('/myFavoriteItem/:id', verifyToken, async(req, res)=>{
-       const id = req.params.id;
-       const result = await favoriteCollection.deleteOne({_id: new ObjectId(id)})
-       res.send(result) 
-    })
-    
-
+    app.delete("/myFavoriteItem/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await favoriteCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+      res.send(result);
+    });
 
     // create bioData private
     app.post("/bioData", verifyToken, async (req, res) => {
@@ -346,19 +352,47 @@ async function run() {
 
     // stripe setup--------------------------------------->
     app.post("/create-payment-intent", async (req, res) => {
-      const {price} = req.body;
+      const { price } = req.body;
       const amount = parseInt(price * 100);
 
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount, 
+        amount: amount,
         currency: "usd",
-        payment_method_types: ['card'],
+        payment_method_types: ["card"],
         // confirm: true,
       });
-      res.send({clientSecret: paymentIntent.client_secret})
+      res.send({ clientSecret: paymentIntent.client_secret });
     });
 
-    // admin api------------------------------------->
+    // cheackout request post api
+    app.post("/cheackrequest", verifyToken, async (req, res) => {
+      const reqInfo = req.body;
+      const result = await contactReqCollection.insertOne({
+        ...reqInfo,
+        status: "pending",
+      });
+      res.send(result);
+    });
+
+    //  get my Req Data Api
+    app.get("/contactReq/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const result = await contactReqCollection
+        .find({ ApplicantEmail: email })
+        .toArray();
+      res.send(result);
+    });
+
+    // delete my req data
+    app.delete("/deleteMyReq/:id", verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await contactReqCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+      res.send(result);
+    });
+
+    // admin api--------------------------------------------->
 
     // get all user Premium request
     app.get("/userPremiumReq", verifyToken, verifyAdmin, async (req, res) => {
@@ -366,27 +400,6 @@ async function run() {
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
-
-    // cheackout request post api
-    app.post('/cheackrequest',verifyToken, async(req, res)=>{
-      const reqInfo = req.body
-      const result = await contactReqCollection.insertOne({...reqInfo, status:"pending"}) 
-      res.send(result)
-    })
-
-    //  get my Req Data Api
-    app.get('/contactReq/:email', verifyToken, async(req, res)=>{
-      const email = req.params.email;
-      const result = await contactReqCollection.find({ApplicantEmail:email}).toArray()
-      res.send(result)
-    })
-
-    // delete my req data
-    app.delete('/deleteMyReq/:id', verifyToken, async(req, res)=>{
-      const id = req.params.id;
-      const result = await contactReqCollection.deleteOne({_id: new ObjectId(id)})
-      res.send(result)
-    })
 
     // make user premium
 
@@ -399,6 +412,24 @@ async function run() {
       });
       res.send(result);
     });
+
+  // get all conctact req data
+  app.get('/allContactReq', verifyToken, verifyAdmin, async(req, res)=>{
+    const result = await contactReqCollection.find().sort({_id: -1}).toArray()
+    res.send(result)
+  })
+
+  
+  // approved contact req
+  app.patch('/approvedContactReq/:id', async(req, res)=>{
+    const id = req.params.id;
+    const query = {_id: new ObjectId(id)}
+    const result = await contactReqCollection.updateOne(query, {$set:{status:'approved'}})
+    res.send(result)
+  })
+
+
+
   } finally {
     console.log(`Mongodb Running`);
   }
