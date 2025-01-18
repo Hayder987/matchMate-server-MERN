@@ -186,7 +186,7 @@ async function run() {
     });
 
     // post my favorite data
-    app.post("/myFavorite", async(req, res)=>{
+    app.post("/myFavorite",verifyToken, async(req, res)=>{
       const favoriteData = req.body;
       const query = {serverId: favoriteData.serverId, email:favoriteData.email}
       const isExist = await favoriteCollection.findOne(query)
@@ -197,7 +197,44 @@ async function run() {
       res.send(result)
     })
 
-    // get My Favorite Data
+    // get My Favorite Data with CI/CD Pipeline
+    app.get('/myFavorite/:email', async(req, res)=>{
+       const email = req.params.email;
+       const query = {email: email}
+       const result = await favoriteCollection.aggregate([
+        {$match:query},
+        {
+          $addFields: {
+            serverIdAsObjectId: { $toObjectId: "$serverId" }
+          }
+        },
+        {
+          $lookup:{
+            from:"bioData",
+            localField: "serverIdAsObjectId",
+            foreignField:"_id",
+            as:"myFavoriteData"
+          },
+        },
+        {
+         $unwind:{
+          path:'$myFavoriteData',
+          preserveNullAndEmptyArrays: true,
+         } 
+        },
+        {
+         $project:{
+          name: "$myFavoriteData.info.name",
+          bioDataId: "$myFavoriteData.bioId",
+          permanentAddress: "$myFavoriteData.info.permanentDivision",
+          occupation:"$myFavoriteData.info.occupation" 
+         } 
+        }
+       ]).toArray()
+       res.send(result)
+    })
+    
+
 
     // create bioData private
     app.post("/bioData", verifyToken, async (req, res) => {
