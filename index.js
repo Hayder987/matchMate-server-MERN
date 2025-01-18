@@ -321,6 +321,13 @@ async function run() {
       res.send(result)
     })
 
+    // delete my req data
+    app.delete('/deleteMyReq/:id', verifyToken, async(req, res)=>{
+      const id = req.params.id;
+      const result = await contactReqCollection.deleteOne({_id: new ObjectId(id)})
+      res.send(result)
+    })
+
     // make user premium
 
     app.patch("/userReq/:id", verifyToken, verifyAdmin, async (req, res) => {
