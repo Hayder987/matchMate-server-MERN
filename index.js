@@ -405,10 +405,20 @@ async function run() {
 
     app.patch("/userReq/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      console.log(id);
       const query = { _id: new ObjectId(id) };
       const result = await userCollection.updateOne(query, {
         $set: { type: "premium", makeDate: new Date() },
+      });
+      res.send(result);
+    });
+
+    
+    // make admin user
+    app.patch("/makeAdmin/:id", verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await userCollection.updateOne(query, {
+        $set: { role: "admin" },
       });
       res.send(result);
     });
@@ -421,12 +431,26 @@ async function run() {
 
   
   // approved contact req
-  app.patch('/approvedContactReq/:id', async(req, res)=>{
+  app.patch('/approvedContactReq/:id', verifyToken, verifyAdmin, async(req, res)=>{
     const id = req.params.id;
     const query = {_id: new ObjectId(id)}
     const result = await contactReqCollection.updateOne(query, {$set:{status:'approved'}})
     res.send(result)
   })
+
+  // get pending All contact req lengt
+  app.get('/allReqPending', verifyToken, verifyAdmin, async(req, res)=>{
+    const query = {status:"pending"}
+    const count = await contactReqCollection.countDocuments(query)
+    res.send({count})
+  })
+
+  // get All User
+  app.get('/allUserData', verifyToken, verifyAdmin, async(req, res)=>{
+     const result = await userCollection.find().sort({_id: -1}).toArray()
+     res.send(result)
+  })
+
 
 
 
