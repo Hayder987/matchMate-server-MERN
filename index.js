@@ -198,7 +198,7 @@ async function run() {
     })
 
     // get My Favorite Data with CI/CD Pipeline
-    app.get('/myFavorite/:email', async(req, res)=>{
+    app.get('/myFavorite/:email', verifyToken, async(req, res)=>{
        const email = req.params.email;
        const query = {email: email}
        const result = await favoriteCollection.aggregate([
@@ -232,6 +232,13 @@ async function run() {
         }
        ]).toArray()
        res.send(result)
+    })
+
+    // delete my Favorite Data
+    app.delete('/myFavoriteItem/:id', verifyToken, async(req, res)=>{
+       const id = req.params.id;
+       const result = await favoriteCollection.deleteOne({_id: new ObjectId(id)})
+       res.send(result) 
     })
     
 
