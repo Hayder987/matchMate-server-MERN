@@ -280,13 +280,27 @@ async function run() {
     // get allBio Pagination Data
     app.get("/allBioData", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const limit = parseInt(req.query.limit) || 12;
+      const age = parseInt(req.query.age);
+      const bioType = req.query.type;
+      const division = req.query.division;
+
+      let query = {};
+
+      if (age || bioType || division) {
+        query = {
+          ...(bioType && { biodataType: bioType }), 
+          ...(division && { "info.presentDivision": division }), 
+          ...(age && { "info.age": { $lt: age } }), 
+        };
+      }
 
       const skip = (page - 1) * limit;
       const items = await bioDataCollection
-        .find()
+        .find(query)
         .skip(skip)
         .limit(limit)
+        .sort({ _id: -1 })
         .toArray();
       const totalItems = await bioDataCollection.countDocuments();
 
@@ -356,8 +370,8 @@ async function run() {
     app.get("/sameBio", async (req, res) => {
       const type = req.query.type;
       const pipeline = [
-        { $match: { biodataType: type } }, 
-        { $sample: { size: 3 } }, 
+        { $match: { biodataType: type } },
+        { $sample: { size: 3 } },
       ];
       const result = await bioDataCollection.aggregate(pipeline).toArray();
       res.send(result);
