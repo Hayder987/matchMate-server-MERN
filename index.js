@@ -56,7 +56,7 @@ async function run() {
     const contactReqCollection = client
       .db("matchMateDB")
       .collection("contactReq");
-      const reviewCollection = client.db("matchMateDB").collection("review");
+    const reviewCollection = client.db("matchMateDB").collection("review");
     const favoriteCollection = client.db("matchMateDB").collection("favorite");
 
     // verify Admin
@@ -393,12 +393,14 @@ async function run() {
       res.send(result);
     });
 
-  // add Review data
-  app.post('/addReview', async(req, res)=>{
-    const reviewData = req.body
-    const result = await reviewCollection.insertOne(reviewData)
-    res.send(result)
-  })
+    // add Review data
+    app.post("/addReviewData", verifyToken, async (req, res) => {
+      const reviewData = req.body;
+      const result = await reviewCollection.insertOne(reviewData);
+      res.send(result);
+    });
+
+    
 
     // admin api--------------------------------------------->
 
@@ -408,6 +410,20 @@ async function run() {
       const result = await userCollection.find(query).toArray();
       res.send(result);
     });
+
+    // get All review Data
+    app.get('/getAllReview',verifyToken, verifyAdmin, async(req, res)=>{
+      const result = await reviewCollection.find().sort({_id: -1}).toArray()
+      res.send(result)
+    })
+
+    // delete review data
+    app.delete('/deleteReviewData/:id', async(req, res)=>{
+      const id = req.params.id
+      const query = {_id: new ObjectId}
+      const result = reviewCollection.deleteOne(query)
+      res.send(result);
+    })
 
     // make user premium
 
@@ -420,7 +436,6 @@ async function run() {
       res.send(result);
     });
 
-    
     // make admin user
     app.patch("/makeAdmin/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id;
@@ -431,56 +446,66 @@ async function run() {
       res.send(result);
     });
 
-  // get all conctact req data
-  app.get('/allContactReq', verifyToken, verifyAdmin, async(req, res)=>{
-    const result = await contactReqCollection.find().sort({_id: -1}).toArray()
-    res.send(result)
-  })
+    // get all conctact req data
+    app.get("/allContactReq", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await contactReqCollection
+        .find()
+        .sort({ _id: -1 })
+        .toArray();
+      res.send(result);
+    });
 
-  
-  // approved contact req
-  app.patch('/approvedContactReq/:id', verifyToken, verifyAdmin, async(req, res)=>{
-    const id = req.params.id;
-    const query = {_id: new ObjectId(id)}
-    const result = await contactReqCollection.updateOne(query, {$set:{status:'approved'}})
-    res.send(result)
-  })
-
-  // get pending All contact req lengt
-  app.get('/allReqPending', verifyToken, verifyAdmin, async(req, res)=>{
-    const query = {status:"pending"}
-    const count = await contactReqCollection.countDocuments(query)
-    res.send({count})
-  })
-
-  // get All User
-  app.get('/allUserData', verifyToken, verifyAdmin, async(req, res)=>{
-     const result = await userCollection.find().sort({_id: -1}).toArray()
-     res.send(result)
-  })
-
-  // get all admin route data length
-  app.get('/allInformation', verifyToken, verifyAdmin, async(req, res)=>{
-    const totalBio = await bioDataCollection.countDocuments()
-    const female = await bioDataCollection.countDocuments({biodataType:"Female"})
-    const male = await bioDataCollection.countDocuments({biodataType:"Male"})
-    const premium = await userCollection.countDocuments({type:"premium"})
-    const totalRevenue = await contactReqCollection.aggregate([
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: "$amount" } 
-        }
+    // approved contact req
+    app.patch(
+      "/approvedContactReq/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await contactReqCollection.updateOne(query, {
+          $set: { status: "approved" },
+        });
+        res.send(result);
       }
-    ]).toArray();
+    );
 
-    res.send({totalBio, female, male,premium, totalRevenue})
-  })
+    // get pending All contact req lengt
+    app.get("/allReqPending", verifyToken, verifyAdmin, async (req, res) => {
+      const query = { status: "pending" };
+      const count = await contactReqCollection.countDocuments(query);
+      res.send({ count });
+    });
 
-  
-  
+    // get All User
+    app.get("/allUserData", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await userCollection.find().sort({ _id: -1 }).toArray();
+      res.send(result);
+    });
 
+    // get all admin route data length
+    app.get("/allInformation", verifyToken, verifyAdmin, async (req, res) => {
+      const totalBio = await bioDataCollection.countDocuments();
+      const female = await bioDataCollection.countDocuments({
+        biodataType: "Female",
+      });
+      const male = await bioDataCollection.countDocuments({
+        biodataType: "Male",
+      });
+      const premium = await userCollection.countDocuments({ type: "premium" });
+      const totalRevenue = await contactReqCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalAmount: { $sum: "$amount" },
+            },
+          },
+        ])
+        .toArray();
 
+      res.send({ totalBio, female, male, premium, totalRevenue });
+    });
   } finally {
     console.log(`Mongodb Running`);
   }
