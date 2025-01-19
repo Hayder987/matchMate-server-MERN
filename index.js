@@ -277,6 +277,27 @@ async function run() {
       res.send(result);
     });
 
+    // get allBio Pagination Data
+    app.get("/allBioData", async (req, res) => {
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      
+      const skip = (page - 1) * limit;
+      const items = await bioDataCollection
+        .find()
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+      const totalItems = await bioDataCollection.countDocuments();
+
+      res.send({
+        items,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+      });
+    });
+
     // update user bio data private
     app.patch("/userBio/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -400,8 +421,6 @@ async function run() {
       res.send(result);
     });
 
-    
-
     // admin api--------------------------------------------->
 
     // get all user Premium request
@@ -412,18 +431,23 @@ async function run() {
     });
 
     // get All review Data
-    app.get('/getAllReview',verifyToken, verifyAdmin, async(req, res)=>{
-      const result = await reviewCollection.find().sort({_id: -1}).toArray()
-      res.send(result)
-    })
+    app.get("/getAllReview", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await reviewCollection.find().sort({ _id: -1 }).toArray();
+      res.send(result);
+    });
 
     // delete review data
-    app.delete('/deleteReviewData/:id', verifyToken, verifyAdmin, async(req, res)=>{
-      const id = req.params.id
-      const query = {_id: new ObjectId(id)}
-      const result = await reviewCollection.deleteOne(query)
-      res.send(result);
-    })
+    app.delete(
+      "/deleteReviewData/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await reviewCollection.deleteOne(query);
+        res.send(result);
+      }
+    );
 
     // make user premium
 
