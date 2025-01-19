@@ -289,9 +289,9 @@ async function run() {
 
       if (age || bioType || division) {
         query = {
-          ...(bioType && { biodataType: bioType }), 
-          ...(division && { "info.presentDivision": division }), 
-          ...(age && { "info.age": { $lt: age } }), 
+          ...(bioType && { biodataType: bioType }),
+          ...(division && { "info.presentDivision": division }),
+          ...(age && { "info.age": { $gt: age } }),
         };
       }
 
@@ -433,6 +433,19 @@ async function run() {
       const result = await reviewCollection.insertOne(reviewData);
       res.send(result);
     });
+
+    // get Public Data website
+    app.get('/publicData', async(req, res)=>{
+      const totalBio = await bioDataCollection.countDocuments();
+      const female = await bioDataCollection.countDocuments({
+        biodataType: "Female",
+      });
+      const male = await bioDataCollection.countDocuments({
+        biodataType: "Male",
+      });
+      const marriage = await reviewCollection.countDocuments()
+      res.send({totalBio, female, male, marriage})
+    })
 
     // admin api--------------------------------------------->
 
