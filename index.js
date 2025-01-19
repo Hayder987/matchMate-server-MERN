@@ -418,10 +418,10 @@ async function run() {
     })
 
     // delete review data
-    app.delete('/deleteReviewData/:id', async(req, res)=>{
+    app.delete('/deleteReviewData/:id', verifyToken, verifyAdmin, async(req, res)=>{
       const id = req.params.id
-      const query = {_id: new ObjectId}
-      const result = reviewCollection.deleteOne(query)
+      const query = {_id: new ObjectId(id)}
+      const result = await reviewCollection.deleteOne(query)
       res.send(result);
     })
 
