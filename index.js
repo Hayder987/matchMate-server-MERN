@@ -56,6 +56,7 @@ async function run() {
     const contactReqCollection = client
       .db("matchMateDB")
       .collection("contactReq");
+      const reviewCollection = client.db("matchMateDB").collection("review");
     const favoriteCollection = client.db("matchMateDB").collection("favorite");
 
     // verify Admin
@@ -391,6 +392,13 @@ async function run() {
       });
       res.send(result);
     });
+
+  // add Review data
+  app.post('/addReview', async(req, res)=>{
+    const reviewData = req.body
+    const result = await reviewCollection.insertOne(reviewData)
+    res.send(result)
+  })
 
     // admin api--------------------------------------------->
 
