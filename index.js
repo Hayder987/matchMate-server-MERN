@@ -281,7 +281,7 @@ async function run() {
     app.get("/allBioData", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
-      
+
       const skip = (page - 1) * limit;
       const items = await bioDataCollection
         .find()
@@ -355,12 +355,11 @@ async function run() {
     //  get similar bio with bioType
     app.get("/sameBio", async (req, res) => {
       const type = req.query.type;
-      const query = { biodataType: type };
-      const result = await bioDataCollection
-        .find(query)
-        .sort({ _id: 1 })
-        .limit(3)
-        .toArray();
+      const pipeline = [
+        { $match: { biodataType: type } }, 
+        { $sample: { size: 3 } }, 
+      ];
+      const result = await bioDataCollection.aggregate(pipeline).toArray();
       res.send(result);
     });
 
