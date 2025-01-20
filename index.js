@@ -447,6 +447,7 @@ async function run() {
       res.send({totalBio, female, male, marriage})
     })
 
+    
     //get review data
     app.get('/reviewAllPublic', async(req, res)=>{
       const result = await reviewCollection.find().sort({marriageDate: -1}).toArray()
