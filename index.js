@@ -286,7 +286,7 @@ async function run() {
     // get allBio Pagination Data
     app.get("/allBioData", async (req, res) => {
       const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 12;
+      const limit = parseInt(req.query.limit) || 20;
       const age = parseInt(req.query.age);
       const bioType = req.query.type;
       const division = req.query.division;
