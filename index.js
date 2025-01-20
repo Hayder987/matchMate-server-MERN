@@ -11,7 +11,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["https://match-mate-83e02.web.app","http://localhost:5173", "https://match-mate-83e02.firebaseapp.com"],
     credentials: true,
   })
 );
@@ -256,6 +256,12 @@ async function run() {
       if (req.user.email !== bioData.email) {
         return res.status(403).send("Forbidden Access");
       }
+
+      const isExist = await bioDataCollection.findOne({email: bioData.email})
+      if(isExist){
+        return res.send({status:"already added"})
+      }
+
       const lastBiodata = await bioDataCollection
         .find({})
         .sort({ bioId: -1 })
@@ -447,7 +453,7 @@ async function run() {
       res.send({totalBio, female, male, marriage})
     })
 
-    
+
     //get review data
     app.get('/reviewAllPublic', async(req, res)=>{
       const result = await reviewCollection.find().sort({marriageDate: -1}).toArray()

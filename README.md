@@ -33,9 +33,8 @@ This is the backend for the **MatchMate** matrimony platform, built using the ME
 
 3. Create a `.env` file in the root directory and add the following environment variables:
     ```
-    PORT=5000
     MONGO_URI=your_mongodb_connection_string
-    JWT_SECRET=your_jwt_secret_key
+    ACCESS_TOKEN=your_jwt_secret_key
     STRIPE_SECRET_KEY=your_stripe_secret_key
     ```
 
@@ -45,7 +44,7 @@ This is the backend for the **MatchMate** matrimony platform, built using the ME
     ```
     This will start the server with Nodemon, and it will automatically restart if you make changes to the code.
 
-5. The server will be running at `http://localhost:5000`. 🌍
+5. The server will be running at `https://match-mate-server.vercel.app`. 🌍
 
 ## Running Tests 🧪
 
