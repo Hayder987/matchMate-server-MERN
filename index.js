@@ -365,7 +365,7 @@ async function run() {
     });
 
     // get bioData by id
-    app.get("/singleBio/:id", verifyToken, async (req, res) => {
+    app.get("/singleBio/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await bioDataCollection.findOne(query);
